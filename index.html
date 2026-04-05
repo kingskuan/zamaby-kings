@@ -1,0 +1,1390 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PrivateFund — FHE Private Payroll Protocol</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-void: #020408;
+    --bg-deep: #04080f;
+    --bg-card: rgba(4, 16, 32, 0.85);
+    --bg-card2: rgba(2, 10, 22, 0.9);
+    --accent-cyan: #00f5ff;
+    --accent-gold: #ffd700;
+    --accent-green: #00ff88;
+    --accent-red: #ff3366;
+    --accent-purple: #b44fff;
+    --text-primary: #e8f4f8;
+    --text-dim: #5a7a8a;
+    --text-label: #8ab4c4;
+    --border-glow: rgba(0, 245, 255, 0.25);
+    --border-dim: rgba(0, 245, 255, 0.08);
+    --glow-cyan: 0 0 20px rgba(0,245,255,0.4), 0 0 60px rgba(0,245,255,0.1);
+    --glow-gold: 0 0 20px rgba(255,215,0,0.4), 0 0 60px rgba(255,215,0,0.1);
+    --glow-green: 0 0 20px rgba(0,255,136,0.4);
+    --glow-red: 0 0 20px rgba(255,51,102,0.5);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg-void);
+    color: var(--text-primary);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 15px;
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* ── Grid Background ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,245,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,245,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── Scan Line ── */
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 1;
+    animation: scanMove 8s linear infinite;
+  }
+
+  @keyframes scanMove {
+    from { background-position: 0 0; }
+    to { background-position: 0 100px; }
+  }
+
+  /* ── Layout ── */
+  .app { position: relative; z-index: 2; max-width: 1280px; margin: 0 auto; padding: 0 24px 80px; }
+
+  /* ── Header ── */
+  .header {
+    padding: 32px 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border-dim);
+    margin-bottom: 32px;
+  }
+
+  .logo-group { display: flex; align-items: center; gap: 16px; }
+
+  .logo-icon {
+    width: 48px; height: 48px;
+    border: 1px solid var(--accent-cyan);
+    box-shadow: var(--glow-cyan);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    position: relative;
+    overflow: hidden;
+    animation: logoPulse 3s ease-in-out infinite;
+  }
+  .logo-icon::before {
+    content: '';
+    position: absolute; inset: -50%;
+    background: conic-gradient(from 0deg, transparent 0deg, rgba(0,245,255,0.15) 60deg, transparent 120deg);
+    animation: spinSlow 4s linear infinite;
+  }
+  @keyframes logoPulse { 0%,100%{box-shadow:var(--glow-cyan)} 50%{box-shadow:0 0 40px rgba(0,245,255,0.6),0 0 80px rgba(0,245,255,0.2)} }
+  @keyframes spinSlow { to { transform: rotate(360deg); } }
+
+  .logo-text { font-family: 'Orbitron', monospace; }
+  .logo-text h1 { font-size: 22px; font-weight: 900; color: var(--accent-cyan); letter-spacing: 0.1em; }
+  .logo-text p { font-size: 10px; color: var(--text-dim); letter-spacing: 0.3em; margin-top: 2px; }
+
+  /* ── Wallet Button ── */
+  .wallet-btn {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    padding: 10px 20px;
+    background: transparent;
+    border: 1px solid var(--accent-cyan);
+    color: var(--accent-cyan);
+    cursor: pointer;
+    letter-spacing: 0.1em;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .wallet-btn:hover { background: rgba(0,245,255,0.1); box-shadow: var(--glow-cyan); }
+  .wallet-btn.connected { border-color: var(--accent-green); color: var(--accent-green); }
+  .wallet-btn.connected:hover { background: rgba(0,255,136,0.1); }
+
+  /* ── Status Bar ── */
+  .status-bar {
+    display: flex; gap: 32px; align-items: center;
+    padding: 12px 20px;
+    background: var(--bg-card2);
+    border: 1px solid var(--border-dim);
+    border-left: 3px solid var(--accent-cyan);
+    margin-bottom: 28px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    overflow-x: auto;
+    gap: 24px;
+  }
+  .status-item { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-dim); }
+  .status-dot.online { background: var(--accent-green); box-shadow: 0 0 8px var(--accent-green); animation: blink 2s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* ── Role Selector ── */
+  .role-tabs {
+    display: flex; gap: 0;
+    margin-bottom: 28px;
+    border: 1px solid var(--border-dim);
+    width: fit-content;
+  }
+
+  .role-tab {
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    padding: 12px 28px;
+    background: transparent;
+    border: none;
+    border-right: 1px solid var(--border-dim);
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .role-tab:last-child { border-right: none; }
+  .role-tab:hover { color: var(--text-primary); background: rgba(0,245,255,0.05); }
+  .role-tab.active { color: var(--accent-cyan); background: rgba(0,245,255,0.08); }
+  .role-tab.active::after {
+    content: '';
+    position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+    background: var(--accent-cyan);
+    box-shadow: 0 0 8px var(--accent-cyan);
+  }
+
+  /* ── Panels ── */
+  .panel { display: none; }
+  .panel.active { display: block; animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+
+  /* ── Grid Layout ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+  @media(max-width:900px) { .grid-2,.grid-3 { grid-template-columns:1fr; } }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-dim);
+    padding: 24px;
+    position: relative;
+    backdrop-filter: blur(12px);
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent);
+    opacity: 0.4;
+  }
+  .card-full { grid-column: 1 / -1; }
+
+  .card-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: var(--accent-cyan);
+    text-transform: uppercase;
+    margin-bottom: 20px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .card-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--border-glow), transparent);
+  }
+
+  /* ── Stats ── */
+  .stat-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+  .stat-label { font-size: 10px; letter-spacing: 0.2em; color: var(--text-dim); text-transform: uppercase; }
+  .stat-value {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 28px;
+    color: var(--text-primary);
+    line-height: 1;
+  }
+  .stat-value.gold { color: var(--accent-gold); text-shadow: var(--glow-gold); }
+  .stat-value.green { color: var(--accent-green); text-shadow: var(--glow-green); }
+  .stat-value.cyan { color: var(--accent-cyan); text-shadow: 0 0 20px rgba(0,245,255,0.5); }
+  .stat-value.encrypted {
+    filter: blur(8px);
+    cursor: pointer;
+    user-select: none;
+    transition: filter 0.3s;
+  }
+  .stat-value.encrypted:hover { filter: blur(4px); }
+  .stat-value.revealed { filter: none; }
+
+  /* ── Inputs ── */
+  .field { margin-bottom: 16px; }
+  .field label {
+    display: block;
+    font-size: 10px; letter-spacing: 0.2em;
+    color: var(--text-label);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .field input, .field select {
+    width: 100%;
+    padding: 10px 14px;
+    background: rgba(0,245,255,0.03);
+    border: 1px solid rgba(0,245,255,0.15);
+    color: var(--text-primary);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    outline: none;
+    transition: all 0.2s;
+  }
+  .field input:focus, .field select:focus {
+    border-color: var(--accent-cyan);
+    box-shadow: 0 0 0 1px rgba(0,245,255,0.2);
+    background: rgba(0,245,255,0.06);
+  }
+  .field input::placeholder { color: var(--text-dim); }
+  .field select option { background: #04080f; }
+
+  /* ── Buttons ── */
+  .btn {
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    padding: 12px 24px;
+    border: 1px solid;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    display: inline-flex; align-items: center; gap: 8px;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn::before {
+    content: '';
+    position: absolute; left: -100%; top: 0; width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+    transition: left 0.4s;
+  }
+  .btn:hover::before { left: 100%; }
+
+  .btn-primary {
+    background: rgba(0,245,255,0.1);
+    border-color: var(--accent-cyan);
+    color: var(--accent-cyan);
+  }
+  .btn-primary:hover { background: rgba(0,245,255,0.2); box-shadow: var(--glow-cyan); }
+
+  .btn-gold {
+    background: rgba(255,215,0,0.08);
+    border-color: var(--accent-gold);
+    color: var(--accent-gold);
+  }
+  .btn-gold:hover { background: rgba(255,215,0,0.15); box-shadow: var(--glow-gold); }
+
+  .btn-green {
+    background: rgba(0,255,136,0.08);
+    border-color: var(--accent-green);
+    color: var(--accent-green);
+  }
+  .btn-green:hover { background: rgba(0,255,136,0.15); box-shadow: var(--glow-green); }
+
+  .btn-danger {
+    background: rgba(255,51,102,0.08);
+    border-color: var(--accent-red);
+    color: var(--accent-red);
+  }
+  .btn-danger:hover { background: rgba(255,51,102,0.15); box-shadow: var(--glow-red); }
+
+  .btn-full { width: 100%; justify-content: center; }
+  .btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  /* ── Employee Table ── */
+  .emp-table { width: 100%; border-collapse: collapse; }
+  .emp-table th {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: var(--text-dim);
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-dim);
+  }
+  .emp-table td {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(0,245,255,0.04);
+    color: var(--text-primary);
+  }
+  .emp-table tr:hover td { background: rgba(0,245,255,0.03); }
+  .emp-table .addr { color: var(--text-dim); font-size: 11px; }
+  .emp-table .amount { color: var(--accent-gold); }
+
+  /* ── Badge ── */
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 8px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    border: 1px solid;
+  }
+  .badge-green { border-color: var(--accent-green); color: var(--accent-green); }
+  .badge-gold { border-color: var(--accent-gold); color: var(--accent-gold); }
+  .badge-red { border-color: var(--accent-red); color: var(--accent-red); }
+  .badge-dim { border-color: var(--text-dim); color: var(--text-dim); }
+
+  /* ── FHE Lock Visual ── */
+  .fhe-lock {
+    display: flex; align-items: center; gap: 12px;
+    padding: 16px;
+    background: rgba(0,245,255,0.04);
+    border: 1px solid rgba(0,245,255,0.12);
+    border-left: 3px solid var(--accent-cyan);
+    margin-bottom: 20px;
+  }
+  .fhe-lock-icon { font-size: 24px; }
+  .fhe-lock-text { font-family: 'Share Tech Mono', monospace; font-size: 11px; line-height: 1.5; color: var(--text-label); }
+  .fhe-lock-text strong { color: var(--accent-cyan); display: block; margin-bottom: 2px; }
+
+  /* ── Compliance Widget ── */
+  .compliance-result {
+    display: flex; align-items: center; gap: 20px;
+    padding: 24px;
+    border: 1px solid;
+    margin-top: 16px;
+    animation: resultReveal 0.5s ease;
+  }
+  @keyframes resultReveal { from{opacity:0;transform:scale(0.95)} to{opacity:1;transform:scale(1)} }
+  .compliance-result.pass { border-color: var(--accent-green); background: rgba(0,255,136,0.05); }
+  .compliance-result.fail { border-color: var(--accent-red); background: rgba(255,51,102,0.05); }
+  .compliance-icon { font-size: 40px; }
+  .compliance-msg { flex: 1; }
+  .compliance-msg h3 { font-family: 'Orbitron', monospace; font-size: 14px; margin-bottom: 6px; }
+  .compliance-msg p { font-size: 12px; color: var(--text-label); line-height: 1.6; }
+
+  /* ── Progress Bar ── */
+  .progress-wrap { margin-bottom: 8px; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-dim); margin-bottom: 4px; font-family: 'Share Tech Mono',monospace; letter-spacing: 0.1em; }
+  .progress-track { height: 4px; background: rgba(0,245,255,0.08); }
+  .progress-bar { height: 4px; background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple)); transition: width 0.6s ease; box-shadow: 0 0 8px rgba(0,245,255,0.4); }
+
+  /* ── Transaction Log ── */
+  .tx-log {
+    max-height: 240px; overflow-y: auto;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    line-height: 2;
+  }
+  .tx-log::-webkit-scrollbar { width: 4px; }
+  .tx-log::-webkit-scrollbar-thumb { background: rgba(0,245,255,0.3); }
+  .tx-entry { display: flex; gap: 12px; align-items: flex-start; padding: 4px 0; border-bottom: 1px solid rgba(0,245,255,0.04); }
+  .tx-time { color: var(--text-dim); flex-shrink: 0; }
+  .tx-msg { color: var(--text-label); flex: 1; }
+  .tx-msg.success { color: var(--accent-green); }
+  .tx-msg.error { color: var(--accent-red); }
+  .tx-msg.pending { color: var(--accent-gold); }
+  .tx-hash { color: var(--accent-cyan); font-size: 10px; }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(2,4,8,0.85);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+  .modal-overlay.open { display: flex; animation: fadeIn 0.2s ease; }
+  .modal {
+    background: var(--bg-card2);
+    border: 1px solid var(--border-glow);
+    box-shadow: var(--glow-cyan);
+    padding: 32px;
+    max-width: 480px; width: 90%;
+    position: relative;
+  }
+  .modal h2 { font-family: 'Orbitron',monospace; font-size: 14px; color: var(--accent-cyan); margin-bottom: 20px; letter-spacing: 0.15em; }
+  .modal-close {
+    position: absolute; top: 16px; right: 16px;
+    background: none; border: none; color: var(--text-dim);
+    cursor: pointer; font-size: 20px;
+    transition: color 0.2s;
+  }
+  .modal-close:hover { color: var(--accent-red); }
+
+  /* ── Toasts ── */
+  .toast-container { position: fixed; top: 24px; right: 24px; z-index: 200; display: flex; flex-direction: column; gap: 10px; }
+  .toast {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 18px;
+    background: var(--bg-card2);
+    border: 1px solid var(--border-dim);
+    min-width: 280px;
+    font-size: 12px;
+    font-family: 'Share Tech Mono',monospace;
+    animation: slideIn 0.3s ease;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  }
+  @keyframes slideIn { from{transform:translateX(100%);opacity:0} to{transform:none;opacity:1} }
+  .toast.success { border-left: 3px solid var(--accent-green); }
+  .toast.error { border-left: 3px solid var(--accent-red); }
+  .toast.info { border-left: 3px solid var(--accent-cyan); }
+  .toast.warning { border-left: 3px solid var(--accent-gold); }
+  .toast-icon { font-size: 16px; }
+
+  /* ── Divider ── */
+  .divider { height: 1px; background: var(--border-dim); margin: 20px 0; }
+
+  /* ── Audit Panel: FHE Proof Visual ── */
+  .proof-visual {
+    font-family: 'Share Tech Mono',monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    line-height: 1.8;
+    padding: 16px;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(0,245,255,0.06);
+    overflow: hidden;
+    position: relative;
+  }
+  .proof-visual::after {
+    content: '▌';
+    animation: cursor 1s infinite;
+    color: var(--accent-cyan);
+  }
+  @keyframes cursor { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  /* ── Employee count badge ── */
+  .count-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 22px; height: 22px; padding: 0 6px;
+    background: rgba(0,245,255,0.12);
+    border: 1px solid rgba(0,245,255,0.3);
+    color: var(--accent-cyan);
+    font-family: 'Share Tech Mono',monospace;
+    font-size: 11px;
+    margin-left: 8px;
+  }
+
+  /* ── Loader ── */
+  .loader {
+    display: inline-block; width: 14px; height: 14px;
+    border: 2px solid rgba(0,245,255,0.2);
+    border-top-color: var(--accent-cyan);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Hexagon network decoration ── */
+  .hex-decoration {
+    position: fixed; right: -80px; top: 20%; opacity: 0.04;
+    font-size: 300px; line-height: 1;
+    pointer-events: none; z-index: 1;
+    color: var(--accent-cyan);
+    filter: blur(2px);
+  }
+
+  .section-gap { margin-bottom: 20px; }
+
+  /* ── Info Box ── */
+  .info-box {
+    padding: 12px 16px;
+    background: rgba(255,215,0,0.04);
+    border: 1px solid rgba(255,215,0,0.15);
+    border-left: 3px solid var(--accent-gold);
+    font-size: 12px; color: var(--text-label); line-height: 1.6;
+    margin-bottom: 16px;
+  }
+  .info-box strong { color: var(--accent-gold); }
+
+  /* ── Animated number ── */
+  @keyframes countUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:none} }
+  .animated-num { animation: countUp 0.5s ease; }
+
+</style>
+</head>
+<body>
+
+<div class="hex-decoration">⬡</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Connect Modal -->
+<div class="modal-overlay" id="connectModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('connectModal')">✕</button>
+    <h2>🔐 CONNECT WALLET</h2>
+    <p style="color:var(--text-label);font-size:13px;margin-bottom:24px;line-height:1.7">
+      PrivateFund requires a Web3 wallet to interact with the FHE smart contract on Zama Protocol Testnet.
+    </p>
+    <button class="btn btn-primary btn-full" onclick="connectWallet()" style="margin-bottom:12px">
+      🦊 Connect MetaMask
+    </button>
+    <button class="btn btn-full" style="border-color:var(--text-dim);color:var(--text-dim)" onclick="connectWalletDemo()">
+      🔬 Demo Mode (No Wallet)
+    </button>
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border-dim)">
+      <p style="font-size:10px;color:var(--text-dim);font-family:'Share Tech Mono',monospace;line-height:1.8">
+        CHAIN: Zama Protocol Sepolia Testnet<br>
+        CONTRACT: 0xPrFu...nd00<br>
+        FHE VERSION: v0.11
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Withdrawal Modal -->
+<div class="modal-overlay" id="withdrawModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('withdrawModal')">✕</button>
+    <h2>💸 WITHDRAW FUNDS</h2>
+    <div class="fhe-lock">
+      <span class="fhe-lock-icon">🔒</span>
+      <div class="fhe-lock-text">
+        <strong>FHE Protected Withdrawal</strong>
+        Amount is encrypted before sending. Smart contract uses FHE.select() to check balance without revealing it.
+      </div>
+    </div>
+    <div class="field">
+      <label>Withdrawal Amount (cUSDT)</label>
+      <input type="number" id="withdrawAmount" placeholder="0.00" min="0" step="0.01">
+    </div>
+    <button class="btn btn-green btn-full" onclick="executeWithdraw()">
+      🔒 Encrypt & Withdraw
+    </button>
+  </div>
+</div>
+
+<div class="app">
+
+  <!-- Header -->
+  <header class="header">
+    <div class="logo-group">
+      <div class="logo-icon">🔐</div>
+      <div class="logo-text">
+        <h1>PRIVATEFUND</h1>
+        <p>FHE PRIVATE PAYROLL PROTOCOL · POWERED BY ZAMA</p>
+      </div>
+    </div>
+    <button class="wallet-btn" id="walletBtn" onclick="openModal('connectModal')">
+      [ CONNECT WALLET ]
+    </button>
+  </header>
+
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <div class="status-item">
+      <div class="status-dot online" id="networkDot"></div>
+      <span id="networkLabel">ZAMA PROTOCOL TESTNET</span>
+    </div>
+    <div class="status-item">
+      <div class="status-dot"></div>
+      <span>FHE ENGINE: <span style="color:var(--accent-green)">ACTIVE</span></span>
+    </div>
+    <div class="status-item">
+      <div class="status-dot"></div>
+      <span>CONTRACT: <span id="contractAddr" style="color:var(--accent-cyan)">0xPrFu...nd00</span></span>
+    </div>
+    <div class="status-item">
+      <div class="status-dot"></div>
+      <span>ENCRYPTION: <span style="color:var(--accent-cyan)">TFHE-rs v0.11</span></span>
+    </div>
+    <div class="status-item">
+      <div class="status-dot"></div>
+      <span>ACL: <span style="color:var(--accent-green)">ENFORCED</span></span>
+    </div>
+  </div>
+
+  <!-- Role Tabs -->
+  <div class="role-tabs">
+    <button class="role-tab active" onclick="switchRole('cfo')" id="tab-cfo">⚡ CFO PANEL</button>
+    <button class="role-tab" onclick="switchRole('employee')" id="tab-employee">👤 EMPLOYEE</button>
+    <button class="role-tab" onclick="switchRole('auditor')" id="tab-auditor">🛡 AUDITOR</button>
+  </div>
+
+  <!-- ═══════════════ CFO PANEL ═══════════════ -->
+  <div class="panel active" id="panel-cfo">
+    <div class="grid-3 section-gap">
+
+      <!-- Stats -->
+      <div class="card">
+        <div class="card-title">Total Employees</div>
+        <div class="stat-row">
+          <div class="stat-label">Registered Headcount</div>
+          <div class="stat-value cyan animated-num" id="empCount">4</div>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-label"><span>BUDGET UTILIZATION</span><span id="budgetPct">68%</span></div>
+          <div class="progress-track"><div class="progress-bar" id="budgetBar" style="width:68%"></div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Total Paid (Encrypted)</div>
+        <div class="stat-row">
+          <div class="stat-label">Click to reveal (re-encrypt)</div>
+          <div class="stat-value gold encrypted" id="totalPaidStat" onclick="revealStat(this, '84,200 cUSDT')" title="Click to decrypt">██████</div>
+        </div>
+        <div style="font-size:11px;color:var(--text-dim);font-family:'Share Tech Mono',monospace;">
+          🔒 Only auditor + CFO can decrypt via ACL
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Payment Rounds</div>
+        <div class="stat-row">
+          <div class="stat-label">Completed Payroll Rounds</div>
+          <div class="stat-value green" id="roundCount">7</div>
+        </div>
+        <div style="font-size:11px;color:var(--text-dim);font-family:'Share Tech Mono',monospace;">
+          Last: <span style="color:var(--accent-cyan)">2025-04-03 14:22 UTC</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2 section-gap">
+
+      <!-- Budget Setup -->
+      <div class="card">
+        <div class="card-title">Budget Configuration</div>
+
+        <div class="fhe-lock">
+          <span class="fhe-lock-icon">🔒</span>
+          <div class="fhe-lock-text">
+            <strong>Encrypted Budget Cap</strong>
+            Once set, even you cannot read the exact figure. FHE comparison verifies compliance without exposure.
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Budget Cap Amount (cUSDT)</label>
+          <input type="number" id="budgetCapInput" placeholder="e.g. 150000" min="0">
+        </div>
+        <button class="btn btn-primary btn-full" onclick="setBudget()">
+          🔐 Encrypt & Set Budget Cap
+        </button>
+      </div>
+
+      <!-- Add Employee -->
+      <div class="card">
+        <div class="card-title">Add Employee</div>
+        <div class="field">
+          <label>Employee Wallet Address</label>
+          <input type="text" id="newEmpAddr" placeholder="0x...">
+        </div>
+        <div class="field">
+          <label>Department (off-chain label)</label>
+          <input type="text" id="newEmpDept" placeholder="e.g. Engineering">
+        </div>
+        <button class="btn btn-gold btn-full" onclick="addEmployee()">
+          ➕ Register Employee
+        </button>
+      </div>
+    </div>
+
+    <!-- Batch Payroll -->
+    <div class="card section-gap">
+      <div class="card-title">
+        Batch Payroll
+        <span class="count-badge" id="batchCount">4</span>
+      </div>
+
+      <div class="info-box">
+        <strong>🔒 All amounts are encrypted client-side</strong> using the Zama Relayer SDK before being sent to the contract.
+        Each employee's salary is encrypted separately — no one can see another's amount.
+      </div>
+
+      <table class="emp-table" id="payrollTable">
+        <thead>
+          <tr>
+            <th>EMPLOYEE</th>
+            <th>ADDRESS</th>
+            <th>DEPARTMENT</th>
+            <th>SALARY (cUSDT)</th>
+            <th>STATUS</th>
+          </tr>
+        </thead>
+        <tbody id="payrollBody">
+          <!-- Populated by JS -->
+        </tbody>
+      </table>
+
+      <div class="divider"></div>
+
+      <div style="display:flex;gap:12px;justify-content:flex-end;flex-wrap:wrap">
+        <button class="btn" style="border-color:var(--text-dim);color:var(--text-dim)" onclick="addPayrollRow()">
+          ➕ Add Row
+        </button>
+        <button class="btn btn-primary" onclick="encryptAndPreview()">
+          🔒 Preview Encrypted Batch
+        </button>
+        <button class="btn btn-gold" onclick="executeBatchPay()">
+          🚀 Execute Batch Payment
+        </button>
+      </div>
+    </div>
+
+    <!-- Transaction Log -->
+    <div class="card">
+      <div class="card-title">Transaction Log</div>
+      <div class="tx-log" id="txLog">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ EMPLOYEE PANEL ═══════════════ -->
+  <div class="panel" id="panel-employee">
+
+    <div class="grid-2 section-gap">
+
+      <div class="card">
+        <div class="card-title">My Encrypted Balance</div>
+
+        <div class="fhe-lock">
+          <span class="fhe-lock-icon">🔐</span>
+          <div class="fhe-lock-text">
+            <strong>Only YOU can decrypt this</strong>
+            Your balance is sealed with your wallet's public key. Employer and other employees cannot see it.
+          </div>
+        </div>
+
+        <div class="stat-row">
+          <div class="stat-label">Available Balance</div>
+          <div class="stat-value gold encrypted" id="myBalance" onclick="decryptBalance()" title="Click to decrypt">███████</div>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="decryptBalance()">
+            🔓 Decrypt My Balance
+          </button>
+          <button class="btn btn-green" onclick="openModal('withdrawModal')">
+            💸 Withdraw
+          </button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">My Account</div>
+        <div style="font-family:'Share Tech Mono',monospace;font-size:12px;line-height:2.2;color:var(--text-label)">
+          <div style="display:flex;justify-content:space-between">
+            <span>Address</span>
+            <span style="color:var(--text-dim)" id="empAddr">0xA3b2...f1e0</span>
+          </div>
+          <div style="display:flex;justify-content:space-between">
+            <span>Department</span>
+            <span style="color:var(--accent-cyan)">Engineering</span>
+          </div>
+          <div style="display:flex;justify-content:space-between">
+            <span>Joined</span>
+            <span>2025-01-15</span>
+          </div>
+          <div style="display:flex;justify-content:space-between">
+            <span>Total Received</span>
+            <span style="color:var(--accent-green)">12 payments</span>
+          </div>
+          <div style="display:flex;justify-content:space-between">
+            <span>ACL Status</span>
+            <span><span class="badge badge-green">✓ AUTHORIZED</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Payment History -->
+    <div class="card section-gap">
+      <div class="card-title">Payment History</div>
+      <table class="emp-table">
+        <thead>
+          <tr>
+            <th>DATE</th>
+            <th>ROUND</th>
+            <th>AMOUNT</th>
+            <th>TX HASH</th>
+            <th>STATUS</th>
+          </tr>
+        </thead>
+        <tbody id="paymentHistory">
+          <!-- Populated by JS -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- FHE Proof Visualization -->
+    <div class="card">
+      <div class="card-title">FHE Cryptographic Activity</div>
+      <div class="proof-visual" id="proofVisual"></div>
+    </div>
+
+  </div>
+
+  <!-- ═══════════════ AUDITOR PANEL ═══════════════ -->
+  <div class="panel" id="panel-auditor">
+
+    <div class="grid-2 section-gap">
+
+      <div class="card">
+        <div class="card-title">Compliance Verification</div>
+        <div class="fhe-lock">
+          <span class="fhe-lock-icon">⚖️</span>
+          <div class="fhe-lock-text">
+            <strong>Zero-Knowledge Compliance Check</strong>
+            The contract computes: <code style="color:var(--accent-cyan)">FHE.le(totalPaid, budgetCap)</code>
+            You receive only the boolean result — exact amounts remain encrypted.
+          </div>
+        </div>
+
+        <button class="btn btn-primary btn-full" id="complianceBtn" onclick="runComplianceCheck()" style="margin-bottom:16px">
+          🔍 Request Compliance Check
+        </button>
+
+        <div id="complianceResult" style="display:none"></div>
+
+        <div class="proof-visual" id="complianceProof" style="display:none">
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Aggregated Stats (Encrypted)</div>
+
+        <div style="font-family:'Share Tech Mono',monospace;font-size:12px;line-height:2.5;color:var(--text-label)">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span>Total Employees</span>
+            <span style="color:var(--accent-cyan)">4</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span>Payment Rounds</span>
+            <span style="color:var(--accent-cyan)">7</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span>Total Disbursed</span>
+            <span class="encrypted" id="auditTotal" onclick="revealStat(this,'84,200 cUSDT')" style="cursor:pointer">██████</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span>Budget Cap</span>
+            <span style="color:var(--text-dim)">ENCRYPTED</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span>Compliance Status</span>
+            <span id="complianceStatusBadge"><span class="badge badge-dim">PENDING CHECK</span></span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span>Last Checked</span>
+            <span id="lastChecked" style="color:var(--text-dim)">—</span>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <button class="btn btn-gold btn-full" onclick="revealAuditTotal()">
+          🔓 Decrypt Total Paid (Auditor Only)
+        </button>
+      </div>
+    </div>
+
+    <!-- Regulator Access Request -->
+    <div class="card section-gap">
+      <div class="card-title">Regulatory Decryption Request</div>
+      <div class="info-box">
+        <strong>MiCA Compliance:</strong> As an authorized regulator, you can request full decryption of any employee's balance for legal/compliance purposes.
+        This action is logged on-chain and creates an immutable audit trail.
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end">
+        <div class="field" style="margin:0">
+          <label>Employee Address</label>
+          <input type="text" id="regulatorTarget" placeholder="0x... (employee wallet address)">
+        </div>
+        <button class="btn btn-danger" onclick="requestRegulatorDecrypt()" style="padding:10px 20px">
+          🔓 Request Decrypt
+        </button>
+      </div>
+    </div>
+
+    <!-- Audit Trail -->
+    <div class="card">
+      <div class="card-title">On-Chain Audit Trail</div>
+      <div class="tx-log" id="auditLog">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+  </div>
+
+</div><!-- /.app -->
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════
+const state = {
+  connected: false,
+  demoMode: false,
+  address: null,
+  role: 'cfo',
+  employees: [
+    { name: 'Alice Chen',    addr: '0xA3b2...f1e0', dept: 'Engineering',  salary: '', status: 'active' },
+    { name: 'Bob Kumar',     addr: '0x7f4a...22cc', dept: 'Product',       salary: '', status: 'active' },
+    { name: 'Carol Zhang',   addr: '0x1d9e...ab81', dept: 'Design',        salary: '', status: 'active' },
+    { name: 'David Okafor',  addr: '0x5c3b...9f12', dept: 'Operations',    salary: '', status: 'active' },
+  ],
+  txLog: [],
+  auditLog: [],
+  paymentHistory: [
+    { date: '2025-04-03', round: 7, amount: '████ cUSDT', hash: '0xf3a1...', status: 'confirmed' },
+    { date: '2025-03-03', round: 6, amount: '████ cUSDT', hash: '0x9c2b...', status: 'confirmed' },
+    { date: '2025-02-03', round: 5, amount: '████ cUSDT', hash: '0x4d7e...', status: 'confirmed' },
+    { date: '2025-01-03', round: 4, amount: '████ cUSDT', hash: '0x2a8f...', status: 'confirmed' },
+  ]
+};
+
+// ═══════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  renderPayrollTable();
+  renderPaymentHistory();
+  renderTxLog();
+  renderAuditLog();
+  renderProofVisual();
+  addLog('System initialized. FHE engine ready.', 'info');
+  addLog('Waiting for wallet connection...', 'pending');
+  addAuditLog('Contract deployed. ACL initialized.', '0x0000');
+  addAuditLog('Auditor access granted to encryptedTotalPaid.', '0x0001');
+});
+
+// ═══════════════════════════════════════════════════════
+//  WALLET
+// ═══════════════════════════════════════════════════════
+async function connectWallet() {
+  if (typeof window.ethereum === 'undefined') {
+    showToast('MetaMask not detected. Use Demo Mode.', 'warning');
+    return;
+  }
+  try {
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    state.connected = true;
+    state.address = accounts[0];
+    updateWalletUI();
+    closeModal('connectModal');
+    showToast('Wallet connected: ' + shortAddr(accounts[0]), 'success');
+    addLog('Wallet connected: ' + shortAddr(accounts[0]), 'success');
+  } catch(e) {
+    showToast('Connection rejected', 'error');
+  }
+}
+
+function connectWalletDemo() {
+  state.connected = true;
+  state.demoMode = true;
+  state.address = '0xDEMO...0000';
+  updateWalletUI();
+  closeModal('connectModal');
+  showToast('Demo mode activated. All FHE operations simulated.', 'info');
+  addLog('Demo mode: FHE operations simulated locally.', 'info');
+}
+
+function updateWalletUI() {
+  const btn = document.getElementById('walletBtn');
+  btn.textContent = '[ ' + shortAddr(state.address) + ' ]';
+  btn.classList.add('connected');
+  document.getElementById('empAddr').textContent = shortAddr(state.address);
+}
+
+// ═══════════════════════════════════════════════════════
+//  ROLES
+// ═══════════════════════════════════════════════════════
+function switchRole(role) {
+  state.role = role;
+  document.querySelectorAll('.role-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + role).classList.add('active');
+  document.getElementById('panel-' + role).classList.add('active');
+}
+
+// ═══════════════════════════════════════════════════════
+//  CFO: BUDGET
+// ═══════════════════════════════════════════════════════
+async function setBudget() {
+  const val = document.getElementById('budgetCapInput').value;
+  if (!val || isNaN(val) || Number(val) <= 0) {
+    showToast('Enter a valid budget amount', 'warning'); return;
+  }
+  if (!requireWallet()) return;
+
+  showToast('Encrypting budget cap with FHE...', 'info');
+  addLog('Encrypting budget cap: ' + val + ' cUSDT...', 'pending');
+
+  await simulateDelay(1500);
+  showToast('Budget cap encrypted & set on-chain ✓', 'success');
+  addLog('setBudgetCap() executed. euint64 stored on-chain.', 'success');
+  addLog('TX: 0x' + randomHex(8) + ' | Gas: 142,888', 'info');
+  document.getElementById('budgetCapInput').value = '';
+
+  // Update progress bar with random utilization
+  const pct = Math.floor(Math.random() * 40 + 50);
+  document.getElementById('budgetBar').style.width = pct + '%';
+  document.getElementById('budgetPct').textContent = pct + '%';
+}
+
+// ═══════════════════════════════════════════════════════
+//  CFO: EMPLOYEES
+// ═══════════════════════════════════════════════════════
+async function addEmployee() {
+  const addr = document.getElementById('newEmpAddr').value.trim();
+  const dept = document.getElementById('newEmpDept').value.trim();
+  if (!addr || !addr.startsWith('0x')) {
+    showToast('Enter a valid 0x address', 'warning'); return;
+  }
+  if (!requireWallet()) return;
+
+  showToast('Registering employee on-chain...', 'info');
+  await simulateDelay(1200);
+
+  const newEmp = {
+    name: 'Employee ' + (state.employees.length + 1),
+    addr: shortAddr(addr),
+    dept: dept || 'General',
+    salary: '',
+    status: 'active'
+  };
+  state.employees.push(newEmp);
+  renderPayrollTable();
+  document.getElementById('empCount').textContent = state.employees.length;
+  document.getElementById('batchCount').textContent = state.employees.length;
+  document.getElementById('newEmpAddr').value = '';
+  document.getElementById('newEmpDept').value = '';
+
+  showToast('Employee registered. ACL initialized.', 'success');
+  addLog('addEmployee(' + shortAddr(addr) + ') → encryptedBalance[0x]=0', 'success');
+  addAuditLog('New employee registered: ' + shortAddr(addr), '0x' + randomHex(4));
+}
+
+// ═══════════════════════════════════════════════════════
+//  CFO: PAYROLL TABLE
+// ═══════════════════════════════════════════════════════
+function renderPayrollTable() {
+  const tbody = document.getElementById('payrollBody');
+  tbody.innerHTML = state.employees.map((emp, i) => `
+    <tr>
+      <td><strong>${emp.name}</strong></td>
+      <td class="addr">${emp.addr}</td>
+      <td><span class="badge badge-dim">${emp.dept}</span></td>
+      <td>
+        <input type="number"
+          placeholder="Encrypted..."
+          style="background:transparent;border:1px solid rgba(0,245,255,0.15);color:var(--accent-gold);
+                 font-family:'Share Tech Mono',monospace;font-size:12px;padding:6px 10px;width:140px;outline:none"
+          onchange="state.employees[${i}].salary=this.value"
+          value="${emp.salary}">
+      </td>
+      <td><span class="badge badge-green">✓ ACTIVE</span></td>
+    </tr>
+  `).join('');
+}
+
+function addPayrollRow() {
+  state.employees.push({ name: 'New Employee', addr: '0x????...', dept: 'TBD', salary: '', status: 'active' });
+  renderPayrollTable();
+  document.getElementById('batchCount').textContent = state.employees.length;
+}
+
+async function encryptAndPreview() {
+  if (!requireWallet()) return;
+  const filled = state.employees.filter(e => e.salary);
+  if (!filled.length) { showToast('Enter at least one salary amount', 'warning'); return; }
+
+  showToast('Encrypting salaries client-side...', 'info');
+  addLog('Relayer SDK: encrypting ' + filled.length + ' salary values...', 'pending');
+  await simulateDelay(1000);
+
+  filled.forEach(e => {
+    addLog('encrypt(' + e.salary + ') → 0x' + randomHex(16) + '...', 'info');
+  });
+  showToast('Preview: ' + filled.length + ' encrypted inputs ready', 'success');
+}
+
+async function executeBatchPay() {
+  if (!requireWallet()) return;
+  const filled = state.employees.filter(e => e.salary);
+  if (!filled.length) { showToast('Enter salary amounts first', 'warning'); return; }
+
+  showToast('Submitting encrypted batch payment...', 'info');
+  addLog('paySalaryBatch() called with ' + filled.length + ' encrypted inputs...', 'pending');
+  await simulateDelay(2000);
+
+  const txHash = '0x' + randomHex(16);
+  filled.forEach(e => {
+    addLog('FHE.add(balance[' + e.addr + '], encAmt) ✓', 'success');
+    addLog('ACL: allow(balance[' + e.addr + '], ' + e.addr + ') ✓', 'success');
+    e.salary = '';
+  });
+  addLog('TX: ' + txHash + ' | Gas: ' + (120000 + filled.length * 45000), 'success');
+
+  const roundEl = document.getElementById('roundCount');
+  roundEl.textContent = parseInt(roundEl.textContent) + 1;
+  renderPayrollTable();
+
+  showToast('Batch payment complete! ' + filled.length + ' salaries paid.', 'success');
+  addAuditLog('Payroll round ' + roundEl.textContent + ': ' + filled.length + ' payments', txHash);
+}
+
+// ═══════════════════════════════════════════════════════
+//  EMPLOYEE: BALANCE
+// ═══════════════════════════════════════════════════════
+async function decryptBalance() {
+  if (!requireWallet()) return;
+  showToast('Re-encrypting with your public key...', 'info');
+  addLog('FHE.sealoutput(balance[me], pubKey) called...', 'pending');
+  await simulateDelay(1500);
+  revealStat(document.getElementById('myBalance'), '12,400 cUSDT');
+  showToast('Balance decrypted locally ✓', 'success');
+  addLog('Balance sealed & decrypted client-side. Only you can read this.', 'success');
+}
+
+async function executeWithdraw() {
+  const amt = document.getElementById('withdrawAmount').value;
+  if (!amt || isNaN(amt) || Number(amt) <= 0) { showToast('Enter withdrawal amount', 'warning'); return; }
+  if (!requireWallet()) return;
+
+  closeModal('withdrawModal');
+  showToast('Encrypting withdrawal amount...', 'info');
+  addLog('FHE.select(FHE.ge(balance, encAmt), sub, balance) ...', 'pending');
+  await simulateDelay(1800);
+  showToast('Withdrawal submitted. Gateway callback pending...', 'success');
+  addLog('Gateway.requestDecryption(hasSufficientFunds) called.', 'info');
+  await simulateDelay(2000);
+  addLog('withdrawalCallback(): funds transferred ✓', 'success');
+  document.getElementById('withdrawAmount').value = '';
+}
+
+// ═══════════════════════════════════════════════════════
+//  AUDITOR: COMPLIANCE
+// ═══════════════════════════════════════════════════════
+async function runComplianceCheck() {
+  if (!requireWallet()) return;
+  const btn = document.getElementById('complianceBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loader"></span> Computing FHE comparison...';
+
+  addLog('[AUDITOR] requestComplianceCheck() called...', 'pending');
+  showToast('FHE computing: le(totalPaid, budgetCap)...', 'info');
+  await simulateDelay(2500);
+
+  // Simulate result
+  const pass = Math.random() > 0.2;
+  const resultEl = document.getElementById('complianceResult');
+  const proofEl = document.getElementById('complianceProof');
+
+  resultEl.style.display = 'block';
+  resultEl.innerHTML = `
+    <div class="compliance-result ${pass ? 'pass' : 'fail'}">
+      <div class="compliance-icon">${pass ? '✅' : '❌'}</div>
+      <div class="compliance-msg">
+        <h3 style="color:${pass ? 'var(--accent-green)' : 'var(--accent-red)'}">${pass ? 'COMPLIANT' : 'OVER BUDGET'}</h3>
+        <p>FHE computation result: <code style="color:var(--accent-cyan)">withinBudget = ${pass}</code><br>
+        Total paid is ${pass ? 'within' : 'exceeding'} the encrypted budget cap.<br>
+        <strong>Exact amounts remain fully encrypted.</strong></p>
+      </div>
+    </div>
+  `;
+
+  proofEl.style.display = 'block';
+  proofEl.textContent = `
+> FHE.le(encryptedTotalPaid, encryptedBudgetCap)
+> Result handle: 0x${randomHex(32)}
+> ACL: makePubliclyDecryptable(withinBudget) ✓
+> Gateway decryption: complete
+> Result: ebool(${pass}) → plaintext(${pass})
+> On-chain event: ComplianceCheckRequested emitted ✓
+> Timestamp: ${new Date().toISOString()}
+  `.trim();
+
+  const now = new Date().toLocaleTimeString();
+  document.getElementById('lastChecked').textContent = now;
+  document.getElementById('complianceStatusBadge').innerHTML =
+    pass ? '<span class="badge badge-green">✓ COMPLIANT</span>'
+         : '<span class="badge badge-red">✗ OVER BUDGET</span>';
+
+  btn.disabled = false;
+  btn.innerHTML = '🔍 Request Compliance Check';
+
+  showToast(pass ? 'Compliance verified: PASS ✓' : 'Alert: Over budget!', pass ? 'success' : 'error');
+  addAuditLog('Compliance check: ' + (pass ? 'PASS' : 'FAIL') + ' | withinBudget=' + pass, '0x' + randomHex(8));
+}
+
+async function revealAuditTotal() {
+  if (!requireWallet()) return;
+  showToast('Re-encrypting total with auditor key...', 'info');
+  await simulateDelay(1500);
+  revealStat(document.getElementById('auditTotal'), '84,200 cUSDT');
+  showToast('Total paid decrypted for auditor ✓', 'success');
+}
+
+async function requestRegulatorDecrypt() {
+  const addr = document.getElementById('regulatorTarget').value.trim();
+  if (!addr) { showToast('Enter employee address', 'warning'); return; }
+  if (!requireWallet()) return;
+
+  showToast('Submitting regulator decryption request...', 'info');
+  addLog('[REGULATOR] regulatorRequestDecryption(' + shortAddr(addr) + ')...', 'pending');
+  await simulateDelay(2000);
+  showToast('Decryption request logged on-chain (MiCA audit trail)', 'success');
+  addLog('Gateway.requestDecryption(balance[' + shortAddr(addr) + ']) submitted.', 'success');
+  addAuditLog('REGULATOR decryption request: ' + shortAddr(addr), '0x' + randomHex(8));
+  document.getElementById('regulatorTarget').value = '';
+}
+
+// ═══════════════════════════════════════════════════════
+//  RENDER HELPERS
+// ═══════════════════════════════════════════════════════
+function renderPaymentHistory() {
+  document.getElementById('paymentHistory').innerHTML = state.paymentHistory.map(p => `
+    <tr>
+      <td>${p.date}</td>
+      <td>#${p.round}</td>
+      <td class="amount">${p.amount}</td>
+      <td class="addr">${p.hash}</td>
+      <td><span class="badge badge-green">✓ ${p.status.toUpperCase()}</span></td>
+    </tr>
+  `).join('');
+}
+
+function addLog(msg, type = 'info') {
+  const now = new Date().toLocaleTimeString('en-US', { hour12: false });
+  state.txLog.unshift({ time: now, msg, type });
+  if (state.txLog.length > 50) state.txLog.pop();
+  renderTxLog();
+}
+
+function renderTxLog() {
+  const el = document.getElementById('txLog');
+  if (!el) return;
+  el.innerHTML = state.txLog.map(e => `
+    <div class="tx-entry">
+      <span class="tx-time">${e.time}</span>
+      <span class="tx-msg ${e.type}">${e.msg}</span>
+    </div>
+  `).join('');
+}
+
+function addAuditLog(msg, hash) {
+  const now = new Date().toLocaleTimeString('en-US', { hour12: false });
+  state.auditLog.unshift({ time: now, msg, hash });
+  if (state.auditLog.length > 30) state.auditLog.pop();
+  renderAuditLog();
+}
+
+function renderAuditLog() {
+  const el = document.getElementById('auditLog');
+  if (!el) return;
+  el.innerHTML = state.auditLog.map(e => `
+    <div class="tx-entry">
+      <span class="tx-time">${e.time}</span>
+      <span class="tx-msg success">${e.msg}</span>
+      <span class="tx-hash">${e.hash}</span>
+    </div>
+  `).join('');
+}
+
+function renderProofVisual() {
+  const el = document.getElementById('proofVisual');
+  if (!el) return;
+  el.textContent = `
+> FHEVM v0.11 initialized
+> euint64 encryptedBalances[0xA3b2] = handle:0x${randomHex(8)}
+> euint64 encryptedBalances[0x7f4a] = handle:0x${randomHex(8)}
+> ACL: allow(balance[0xA3b2], 0xA3b2) ✓
+> ACL: allow(balance[0x7f4a], 0x7f4a) ✓
+> Relayer SDK: sealOutput ready
+> Waiting for re-encryption request...
+  `.trim();
+}
+
+// ═══════════════════════════════════════════════════════
+//  UI UTILS
+// ═══════════════════════════════════════════════════════
+function revealStat(el, value) {
+  el.classList.remove('encrypted');
+  el.classList.add('revealed', 'animated-num');
+  el.textContent = value;
+}
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function showToast(msg, type = 'info') {
+  const icons = { success: '✓', error: '✕', warning: '⚠', info: '◈' };
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.innerHTML = `<span class="toast-icon">${icons[type]}</span><span>${msg}</span>`;
+  container.appendChild(toast);
+  setTimeout(() => toast.remove(), 4000);
+}
+
+function requireWallet() {
+  if (!state.connected) {
+    openModal('connectModal');
+    return false;
+  }
+  return true;
+}
+
+function simulateDelay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function shortAddr(addr) {
+  if (!addr || addr.length < 10) return addr;
+  return addr.slice(0, 6) + '...' + addr.slice(-4);
+}
+
+function randomHex(len) {
+  return Array.from({length: len}, () => Math.floor(Math.random() * 16).toString(16)).join('');
+}
+
+// Close modals on backdrop click
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) overlay.classList.remove('open');
+  });
+});
+
+// Animate proof visual periodically
+setInterval(() => {
+  if (state.role === 'employee') renderProofVisual();
+}, 5000);
+</script>
+</body>
+</html>
