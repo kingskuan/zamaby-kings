@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { FHE, euint64, euint32, ebool, externalEuint64, externalEuint32 } from "@zama/fhevm/contracts/FHE.sol";
-import { SepoliaZamaFHEVMConfig } from "@zama/fhevm/contracts/config/ZamaFHEVMConfig.sol";
-import { SepoliaZamaGatewayConfig } from "@zama/fhevm/contracts/config/ZamaGatewayConfig.sol";
-import { GatewayCaller } from "@zama/fhevm/contracts/GatewayCaller.sol";
+import { FHE, euint64, euint32, ebool, externalEuint64, externalEuint32 } from "fhevm/lib/FHE.sol";
+import { SepoliaZamaFHEVMConfig } from "fhevm/config/ZamaFHEVMConfig.sol";
+import { SepoliaZamaGatewayConfig } from "fhevm/config/ZamaGatewayConfig.sol";
+import { GatewayCaller } from "fhevm/lib/GatewayCaller.sol";
 
 /**
  * @title PrivateFund

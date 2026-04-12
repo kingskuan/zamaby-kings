@@ -1,19 +1,11 @@
 {
-  "name": "privatefund-fhe",
+  "name": "privatefund-frontend",
   "version": "1.0.0",
-  "description": "FHE-powered private payroll protocol built on Zama FHEVM",
+  "description": "PrivateFund dApp — FHE Private Payroll Protocol (static frontend)",
   "scripts": {
-    "compile": "hardhat compile",
-    "test": "hardhat test",
-    "deploy:local": "hardhat run scripts/deploy.js --network hardhat",
-    "deploy:sepolia": "hardhat run scripts/deploy.js --network sepolia",
-    "node": "hardhat node"
+    "start": "npx serve frontend -p ${PORT:-3000}"
   },
   "devDependencies": {
-    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
-    "hardhat": "^2.22.0"
-  },
-  "dependencies": {
-    "@zama/fhevm": "^0.11.0"
+    "serve": "^14.2.4"
   }
 }
